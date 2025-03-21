@@ -93,13 +93,13 @@ async function badFunc() {
 
 // Using tryCatch
 const getData = async () => {
-  let [data, err] = await tryCatch(badFunc());
+  let [data, err] = await tryCatch(badFunc);
   if (!err) return Response.json({ data });
 
-  [data, err] = await tryCatch(badFunc());
+  [data, err] = await tryCatch(badFunc);
   if (!err) return Response.json({ data });
 
-  [data, err] = await tryCatch(goodFunc());
+  [data, err] = await tryCatch(goodFunc);
   if (!err) return Response.json({ data });
 
   return Response.error();
@@ -107,13 +107,13 @@ const getData = async () => {
 
 // Using tryCatch with constants
 const getDataConst = async () => {
-  const [data1, err1] = await tryCatch(badFunc());
+  const [data1, err1] = await tryCatch(badFunc);
   if (!err1) return Response.json({ data: data1 });
 
-  const [data2, err2] = await tryCatch(badFunc());
+  const [data2, err2] = await tryCatch(badFunc);
   if (!err2) return Response.json({ data: data2 });
 
-  const [data3, err3] = await tryCatch(goodFunc());
+  const [data3, err3] = await tryCatch(goodFunc);
   if (!err3) return Response.json({ data: data3 });
 
   return Response.error();
