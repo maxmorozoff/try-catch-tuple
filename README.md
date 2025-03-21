@@ -12,7 +12,7 @@ A TypeScript utility function for structured error handling in both synchronous 
 ## Installation
 
 ```sh
-npm install your-package-name
+npm install @maxmorozoff/try-catch-tuple
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ npm install your-package-name
 ### Basic Synchronous Usage
 
 ```ts
-import { tryCatch } from "your-package-name";
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
 
 const [result, error] = tryCatch.sync(() => JSON.parse("73"));
 console.log(result); // 73
