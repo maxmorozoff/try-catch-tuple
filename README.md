@@ -128,7 +128,7 @@ const getDataStandard = async () => {
     return Response.json({ data });
   } catch (err) {
     try {
-      const data = await goodFunc();
+      const data = await badFunc();
       return Response.json({ data });
     } catch (err) {
       try {
