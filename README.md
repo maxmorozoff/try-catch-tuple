@@ -2,6 +2,8 @@
 
 A TypeScript utility function for structured error handling in both synchronous and asynchronous operations.
 
+See [Theo's gist for more details](https://gist.github.com/t3dotgg/a486c4ae66d32bf17c09c73609dacc5b)
+
 ## Features
 
 - Handles both synchronous and asynchronous functions.
