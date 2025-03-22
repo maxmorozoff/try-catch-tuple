@@ -38,12 +38,7 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist/*.js",
-    "dist/*.cjs",
-    "dist/*js.map",
-    "dist/*.d.ts"
-  ],
+  "files": ["dist/*.js", "dist/*.cjs", "dist/*js.map", "dist/*.d.ts"],
   "publishConfig": {
     "provenance": true,
     "access": "public"
