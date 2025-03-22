@@ -24,6 +24,7 @@
     "test:types": "tsc --noEmit",
     "test": "bun run test:unit && bun run test:types",
     "build": "tsup index.ts --format esm,cjs --sourcemap",
+    "version": "changeset version && biome format --fix package.json",
     "lint": "biome check "
   },
   "type": "module",
