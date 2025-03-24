@@ -10,8 +10,11 @@
         "tsup": "^8.4.0",
       },
       "peerDependencies": {
-        "typescript": "^5.8.2",
+        "typescript": "^5.0.0",
       },
+      "optionalPeers": [
+        "typescript",
+      ],
     },
   },
   "packages": {

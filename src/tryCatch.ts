@@ -1,10 +1,30 @@
 type Success<T> = [data: T, error: null];
-type Failure<E> = [data: null, error: E];
-type Result<T, E = Error> = Success<T> | Failure<E>;
+type Failure<E> = [data: null, error: E | Error];
+type Result<T, E> = Success<T> | Failure<E>;
 
-type TryCatchReturn<T> = T extends Promise<infer U>
-  ? Promise<Result<U, Error>>
-  : Result<T, Error>;
+type TryCatchResult<T, E> = T extends Promise<infer U>
+  ? Promise<Result<U, E>>
+  : Result<T, E>;
+
+type TryCatchFunc<E_ extends Error = never> = <T, E extends Error = E_>(
+  fn?: T | (() => T),
+  operationName?: string,
+) => TryCatchResult<T, E>;
+
+type TryCatch<
+  F extends TryCatchFunc = TryCatchFunc,
+  E_ extends Error = never,
+> = F & {
+  sync: <T, E extends Error = E_>(
+    fn: () => T,
+    operationName?: string,
+  ) => Result<T, E>;
+  async: <T, E extends Error = E_>(
+    fn: Promise<T> | (() => Promise<T>),
+    operationName?: string,
+  ) => Promise<Result<T, E>>;
+  errors: <E extends Error>() => TryCatch<TryCatchFunc<E | E_>, E | E_>;
+};
 
 /**
  * tryCatch - Error handling that can be synchronous or asynchronous
@@ -14,56 +34,53 @@ type TryCatchReturn<T> = T extends Promise<infer U>
  * @param operationName Optional name for context.
  * @returns A Result, or a Promise resolving to a Result, depending on fn.
  */
-export function tryCatch<T>(
+export const tryCatch: TryCatch = <T, E extends Error = never>(
   fn?: T | (() => T),
   operationName?: string,
-): TryCatchReturn<T> {
+) => {
   try {
     const result = typeof fn === "function" ? (fn as () => T)() : fn;
 
     if (result instanceof Promise)
-      return result
-        .then((data) => [data, null])
-        .catch((rawError) =>
-          handleError(rawError, operationName),
-        ) as TryCatchReturn<T>;
+      return tryCatchAsync(result, operationName) as TryCatchResult<T, E>;
 
-    return [result, null] as TryCatchReturn<T>;
+    return [result, null] as TryCatchResult<T, E>;
   } catch (rawError) {
-    return handleError(rawError, operationName) as TryCatchReturn<T>;
+    return handleError(rawError, operationName) as TryCatchResult<T, E>;
   }
-}
-tryCatch.sync = tryCatchSync;
-tryCatch.async = tryCatchAsync;
+};
 
-export function tryCatchSync<T>(
-  fn: () => T,
-  operationName?: string,
-): Result<T, Error> {
+export const tryCatchSync: TryCatch["sync"] = (fn, operationName) => {
   try {
     const result = fn();
     return [result, null] as const;
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
-}
+};
 
-export async function tryCatchAsync<T>(
-  fn: Promise<T> | (() => Promise<T>),
-  operationName?: string,
-): Promise<Result<T, Error>> {
+export const tryCatchAsync: TryCatch["async"] = async (fn, operationName) => {
   try {
     const promise = typeof fn === "function" ? fn() : fn;
-    const data = await promise;
-    return [data, null] as const;
+    const result = await promise;
+    return [result, null] as const;
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
-}
+};
+
+export const tryCatchErrors = <E extends Error>() =>
+  tryCatch as TryCatch<TryCatchFunc<E>, E>;
+
+tryCatch.sync = tryCatchSync;
+tryCatch.async = tryCatchAsync;
+tryCatch.errors = tryCatchErrors;
 
 function handleError(rawError: unknown, operationName?: string) {
   const processedError =
-    rawError instanceof Error ? rawError : new Error(String(rawError));
+    rawError instanceof Error
+      ? rawError
+      : new Error(String(rawError), { cause: rawError });
 
   if (operationName) {
     processedError.message = `Operation "${operationName}" failed: ${processedError.message}`;

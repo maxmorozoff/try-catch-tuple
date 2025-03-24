@@ -215,7 +215,7 @@ describe("tryCatch", () => {
   // Synchronous Division Tests
   describe("performDivision", () => {
     function performDivision(numerator: number, denominator: number) {
-      return tryCatch<number>(() => {
+      return tryCatch(() => {
         if (denominator === 0) {
           throw new Error("Cannot divide by zero!");
         }
@@ -281,10 +281,7 @@ describe("tryCatch", () => {
     }
 
     function parseJsonString(jsonString: string) {
-      return tryCatch<Person>(
-        () => JSON.parse(jsonString) as Person,
-        "JSON Parsing",
-      );
+      return tryCatch(() => JSON.parse(jsonString) as Person, "JSON Parsing");
     }
 
     test("should successfully parse valid JSON", () => {
@@ -399,6 +396,112 @@ describe("tryCatch", () => {
       if (error) {
         expect(error.message).toBe('Operation "fetch" failed: 404');
       }
+    });
+  });
+
+  describe("handleError", () => {
+    const now = new Date();
+    test.each([
+      ["string", "foo bar baz", "foo bar baz"],
+      ["number", 73, "73"],
+      ["NaN", Number.NaN, "NaN"],
+      ["zero", 0, "0"],
+      ["positive infinity", Number.POSITIVE_INFINITY, "Infinity"],
+      ["negative infinity", Number.NEGATIVE_INFINITY, "-Infinity"],
+      ["object", { foo: "bar" }, "[object Object]"],
+      ["null", null, "null"],
+      ["promise", new Promise(() => {}), "[object Promise]"],
+      ["undefined", undefined, "undefined"],
+      ["array", [1, 2, 3], "1,2,3"],
+      ["function", function error() {}, String(function error() {})],
+      ["arrow function", () => {}, String(() => {})],
+      ["symbol", Symbol("symbol"), "Symbol(symbol)"],
+      ["bigint", 123n, "123"],
+      ["boolean", true, "true"],
+      ["date", now, now.toString()],
+      ["error", new Error("error"), "error"],
+      ["aggregate error", new AggregateError([new Error()], "error"), "error"],
+      ["regexp", /foo/g, "/foo/g"],
+      ["buffer", Buffer.from([1, 2, 3]), "\u0001\u0002\u0003"],
+      ["typed array", new Uint8Array([1, 2, 3]), "1,2,3"],
+      ["array buffer", new ArrayBuffer(8), "[object ArrayBuffer]"],
+      ["data view", new DataView(new ArrayBuffer(8)), "[object DataView]"],
+      ["set", new Set([1, 2, 3]), "[object Set]"],
+      ["map", new Map([[1, "a"]]), "[object Map]"],
+      ["weak set", new WeakSet(), "[object WeakSet]"],
+      ["weak map", new WeakMap(), "[object WeakMap]"],
+    ] as const)("throwing %s [%#]", (type, value, valueString) => {
+      const [, error] = tryCatch((): void => {
+        throw value;
+      }, `Throwing ${type}`);
+
+      if (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe(
+          `Operation "Throwing ${type}" failed: ${valueString}`,
+        );
+        if (value instanceof Error) return;
+        if (value === null) expect(error.cause).toBeNull();
+        if (value === undefined) expect(error.cause).toBeUndefined();
+        if (Number.isNaN(value)) expect(Number.isNaN(error.cause)).toBe(true);
+        expect(error.cause).toBe(value);
+      } else {
+        expect.unreachable();
+      }
+    });
+  });
+
+  describe("CustomError", () => {
+    class CustomError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = "CustomError";
+      }
+    }
+
+    test("should handle multiple errors", () => {
+      const [result, error] = tryCatch.errors<
+        | CustomError
+        | TypeError
+        | SyntaxError
+        | ReferenceError
+        | WebTransportError
+        | DOMException
+      >()((): void => {
+        throw new CustomError("[CustomError]");
+      });
+
+      expect(result).toBeNil();
+      //     ^?
+      expect(error).toBeInstanceOf(Error);
+      //     ^?
+      expect(error).toBeInstanceOf(CustomError);
+      expect(error).not.toBeInstanceOf(TypeError);
+      expect(error).not.toBeInstanceOf(SyntaxError);
+      if (error) {
+        error;
+        // ^?
+        if (error instanceof CustomError) {
+          expect(error.message).toBe("[CustomError]");
+          //     ^?
+          return;
+        }
+        if (error instanceof DOMException) {
+          expect(error.message).toBe("[DOMException]");
+          //     ^?
+          return;
+        }
+        if (error instanceof WebTransportError) {
+          expect(error.message).toBe("[WebTransportError]");
+          //     ^?
+          return;
+        }
+        error;
+        // ^?
+        return;
+      }
+      result;
+      // ^?
     });
   });
 });
