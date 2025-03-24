@@ -2,6 +2,8 @@
 "@maxmorozoff/try-catch-tuple": minor
 ---
 
+feat: enhance error handling and improve TypeScript support
+
 #### Added
 
 - Introduced `.errors<E>()` method to allow specifying expected error types.
