@@ -1,6 +1,10 @@
 # tryCatch Utility & Validation Tools
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![CI](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/ci.yml/badge.svg)](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/ci.yml) [![Release](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/release.yml/badge.svg)](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/release.yml)
+[![CI](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/ci.yml/badge.svg)](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/ci.yml)
+[![Release](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/release.yml/badge.svg)](https://github.com/maxmorozoff/try-catch-tuple/actions/workflows/release.yml)
+[![try-catch NPM Version](https://img.shields.io/npm/v/%40maxmorozoff%2Ftry-catch-tuple?label=tryCatch)](https://www.npmjs.com/package/@maxmorozoff/try-catch-tuple)
+[![ts-plugin NPM Version](https://img.shields.io/npm/v/%40maxmorozoff%2Ftry-catch-tuple-ts-plugin?label=ts-plugin)](https://www.npmjs.com/package/@maxmorozoff/try-catch-tuple-ts-plugin)
+[![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](https://github.com/maxmorozoff/try-catch-tuple/LICENSE)
 
 A TypeScript utility for Go-style structured error handling (`[data, error]`) combined with powerful tooling (TypeScript Plugin & Build Transformer) to ensure correctness.
 
