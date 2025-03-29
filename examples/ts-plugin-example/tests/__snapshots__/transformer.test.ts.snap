@@ -1,0 +1,25 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`transformer should work 1`] = `
+"index.ts(10,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(14,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(18,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(22,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(25,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(28,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(31,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(39,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(45,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(45,10): error TS2481: Cannot initialize outer scoped variable 'result' in the same scope as block scoped declaration 'result'.
+index.ts(50,7): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(54,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(58,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(61,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(64,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(67,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(70,11): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(72,9): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(74,7): error TS54600: tryCatch return value should be destructured as [result, error].
+index.ts(75,9): error TS54600: tryCatch return value should be destructured as [result, error].
+"
+`;
