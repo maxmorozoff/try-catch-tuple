@@ -21,6 +21,8 @@ jobs:
         run: bun run lint
       - name: Typecheck
         run: bun run test:types
+      - name: Build
+        run: bun run build
       - name: Debug test:types execution
         run: |
           cd examples/ts-plugin-example 
