@@ -46,6 +46,7 @@
     "tsup": "^8.4.0"
   },
   "peerDependencies": {
+    "@maxmorozoff/try-catch-tuple": "^0.1.1",
     "typescript": "^5.0.0",
     "ts-patch": "^3.3.0"
   },
