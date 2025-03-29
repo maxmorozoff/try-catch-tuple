@@ -26,7 +26,7 @@
     "build": "tsup index.ts --format esm,cjs --dts --sourcemap",
     "clean": "rm -rf dist && echo done",
     "version": "biome format --fix package.json",
-    "prepublishOnly": "cp ../../{LICENSE} dist/",
+    "prepublishOnly": "cp ../../LICENSE dist/",
     "publish": "bun publish",
     "lint": "biome check"
   },
