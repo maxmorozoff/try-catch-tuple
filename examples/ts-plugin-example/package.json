@@ -12,6 +12,7 @@
   "scripts": {
     "test:unit": "bun test",
     "test:types": "tspc --project ./tsconfig.transformer.json",
+    "prepare": "ts-patch install -s",
     "clean": "rm -rf out && echo done"
   },
   "dependencies": {
