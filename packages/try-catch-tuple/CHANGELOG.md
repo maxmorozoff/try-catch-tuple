@@ -1,5 +1,11 @@
 # @maxmorozoff/try-catch-tuple
 
+## 0.1.1
+
+### Patch Changes
+
+- 903e46f: introduce branded tuple type
+
 ## 0.1.0
 
 ### Minor Changes
