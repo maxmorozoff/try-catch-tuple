@@ -47,7 +47,7 @@ jobs:
         uses: changesets/action@v1
         if: steps.build.outcome == 'success'
         with:
-          publish: bun publish
+          publish: bun run publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
