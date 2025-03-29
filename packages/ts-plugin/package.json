@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test:unit": "bun  --cwd='../../examples/ts-plugin-example' run test:unit",
-    "test:types": "bun --cwd='../../examples/ts-plugin-example' run test:types",
+    "test:types": "tsc --noEmit",
     "test": "bun run test:unit",
     "build": "tsup index.ts transformer.ts --format esm,cjs --dts --dts-resolve --sourcemap --splitting false",
     "clean": "rm -rf dist && echo done",

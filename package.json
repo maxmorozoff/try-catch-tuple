@@ -10,11 +10,13 @@
     "url": "git+https://github.com/maxmorozoff/try-catch-tuple.git"
   },
   "scripts": {
-    "test": "   bun --filter './packages/**' test",
-    "build": "  bun --filter './packages/**' build",
-    "version": "bun --filter './packages/**' version",
-    "publish": "bun --filter './packages/**' publish",
-    "clean": "  bun --filter '*' clean",
+    "test:types": "bun --filter './packages/**' test:types",
+    "test:unit": " bun --filter './packages/**' test:unit",
+    "test": "      bun --filter './packages/**' test",
+    "build": "     bun --filter './packages/**' build",
+    "version": "   bun --filter './packages/**' version",
+    "publish": "   bun --filter './packages/**' publish",
+    "clean": "     bun --filter '*' clean",
     "lint": "biome check"
   },
   "packageManager": "bun@1.2.2",
