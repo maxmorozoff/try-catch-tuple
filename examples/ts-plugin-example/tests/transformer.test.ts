@@ -7,6 +7,10 @@ describe("transformer", () => {
     await $`rm -rf ./out`;
   });
   it("should work", async () => {
+    console.log(
+      "Running test:types",
+      await $`pwd`.text(), // /tmp
+    );
     const result = await $`bun run test:types`.nothrow().quiet().text();
 
     expect(result).toMatchSnapshot();
