@@ -26,7 +26,7 @@
     "build": "tsup index.ts --format esm,cjs --dts --sourcemap",
     "clean": "rm -rf dist && echo done",
     "version": "biome format --fix package.json",
-    "prepublishOnly": "cp ../../LICENSE dist/",
+    "prepublishOnly": "cp ../../LICENSE ./",
     "publish": "bun publish",
     "lint": "biome check"
   },
@@ -34,7 +34,7 @@
   "module": "dist/index.js",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
-  "files": ["dist", "package.json", "README.md", "CHANGELOG.md"],
+  "files": ["dist", "package.json", "README.md", "CHANGELOG.md", "LICENSE"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
