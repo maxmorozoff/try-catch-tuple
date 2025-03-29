@@ -23,12 +23,6 @@ jobs:
         run: bun run test:types
       - name: Build
         run: bun run build
-      - name: Debug test:types execution
-        run: |
-          cd examples/ts-plugin-example 
-          bun ts-patch check
-          bun run test:types
-          bun test
       - name: Unit tests
         run: bun run test:unit
       # TODO: upload coverage
