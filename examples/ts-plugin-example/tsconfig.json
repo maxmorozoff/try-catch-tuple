@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    // Enable latest features
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    // "module": "ESNext",
+    "module": "Node16",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+
+    // Bundler mode
+    "moduleResolution": "node16",
+    // "moduleResolution": "bundler",
+    // "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "outDir": "./dist",
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Add our plugin
+    "plugins": [
+      // {
+      //   "name": "@maxmorozoff/try-catch-tuple-ts-plugin",
+      // },
+
+      // {
+      //   "transform": "@maxmorozoff/try-catch-tuple-ts-plugin",
+      // },
+
+      {
+        "name": "@maxmorozoff/try-catch-tuple-ts-plugin",
+        "transform": "@maxmorozoff/try-catch-tuple-ts-plugin/transformer",
+        // --- SHARED Configuration (applies to both LSP & Transformer) ---
+        "errorLevel": "error", // or "warning". Default: "error"
+        "allowIgnoredError": true, // Default: true
+        "checkWrappedCalls": true // Default: true
+      }
+    ]
+  },
+  "exclude": ["dist/**", "out/**"]
+}

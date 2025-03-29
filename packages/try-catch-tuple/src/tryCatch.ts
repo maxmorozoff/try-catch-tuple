@@ -1,5 +1,6 @@
-type Success<T> = [data: T, error: null];
-type Failure<E> = [data: null, error: E | Error];
+type Branded<T> = T & { __tryCatchTupleResult: any };
+type Success<T> = Branded<[data: T, error: null]>;
+type Failure<E> = Branded<[data: null, error: E | Error]>;
 type Result<T, E> = Success<T> | Failure<E>;
 
 type TryCatchResult<T, E> = T extends Promise<infer U>
@@ -50,20 +51,29 @@ export const tryCatch: TryCatch = <T, E extends Error = never>(
   }
 };
 
-export const tryCatchSync: TryCatch["sync"] = (fn, operationName) => {
+export const tryCatchSync: TryCatch["sync"] = <T, E extends Error = never>(
+  fn: () => T,
+  operationName?: string,
+) => {
   try {
     const result = fn();
-    return [result, null] as const;
+    return [result, null] as Result<T, E>;
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
 };
 
-export const tryCatchAsync: TryCatch["async"] = async (fn, operationName) => {
+export const tryCatchAsync: TryCatch["async"] = async <
+  T,
+  E extends Error = never,
+>(
+  fn: Promise<T> | (() => Promise<T>),
+  operationName?: string,
+) => {
   try {
     const promise = typeof fn === "function" ? fn() : fn;
     const result = await promise;
-    return [result, null] as const;
+    return [result, null] as Result<Awaited<T>, E>;
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
