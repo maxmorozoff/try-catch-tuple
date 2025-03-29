@@ -14,7 +14,7 @@
     "test": "bun run test:unit",
     "build": "tsup index.ts transformer.ts --format esm,cjs --dts --dts-resolve --sourcemap --splitting false",
     "clean": "rm -rf dist && echo done",
-    "version": "changeset version && biome format --fix package.json",
+    "version": "biome format --fix package.json",
     "prepublishOnly": "cp ../../{LICENSE,CHANGELOG.md} dist/",
     "publish": "bun publish",
     "lint": "biome check"
@@ -22,7 +22,7 @@
   "module": "dist/index.mjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "package.json", "README.md"],
+  "files": ["dist", "package.json", "README.md", "CHANGELOG.md"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

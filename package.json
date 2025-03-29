@@ -14,7 +14,7 @@
     "test:unit": " bun --filter './packages/**' test:unit",
     "test": "      bun --filter './packages/**' test",
     "build": "     bun --filter './packages/**' build",
-    "version": "   bun --filter './packages/**' version",
+    "version": "   changeset version && bun --filter './packages/**' version",
     "publish": "   bun --filter './packages/**' publish",
     "clean": "     bun --filter '*' clean",
     "lint": "biome check"
