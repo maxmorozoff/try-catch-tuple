@@ -12,8 +12,12 @@ A TypeScript utility for Go-style structured error handling (`[data, error]`) co
 
 This repository provides two key components designed to work together:
 
-1. **`@maxmorozoff/try-catch-tuple`:** A utility function for wrapping synchronous or asynchronous operations, returning a tuple `[data, error]` inspired by Go's error handling pattern (error last).
-2. **`@maxmorozoff/try-catch-tuple-ts-plugin`:** Tooling (Language Service Plugin + Build Transformer) that integrates with TypeScript to enforce correct destructuring and handling of the `[data, error]` tuple returned by the utility.
+1. **[`try-catch-tuple`](#trycatch-utility-maxmorozofftry-catch-tuple):** A utility function for wrapping synchronous or asynchronous operations, returning a tuple `[data, error]` inspired by Go's error handling pattern (error last).
+2. **[`try-catch-tuple-ts-plugin`](#plugin--transformer-maxmorozofftry-catch-tuple-ts-plugin):** Tooling (Language Service Plugin + Build Transformer) that integrates with TypeScript to enforce correct destructuring and handling of the `[data, error]` tuple returned by the utility.
+
+> [!IMPORTANT]  
+> While `try-catch-tuple` is considered production-ready due to its minimal implementation approach,  
+> `try-catch-tuple-ts-plugin` is a proof of concept (PoC) and still in its early stages.
 
 ## Showcase: Plugin & Code Fixes
 
