@@ -266,7 +266,7 @@ type Result<T, E = Error> = [data: T, error: null] | [data: null, error: E];
 ## Edge Cases
 
 ```ts
-tryCatch(); // Returns [undefined, null]
+tryCatch(undefined); // Returns [undefined, null]
 tryCatch(null); // Returns [null, null]
 tryCatch(() => {
   throw new Error("Unexpected Error");

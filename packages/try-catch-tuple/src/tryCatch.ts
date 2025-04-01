@@ -8,7 +8,7 @@ type TryCatchResult<T, E extends Error> = T extends Promise<infer U>
   : Result<T, E>;
 
 type TryCatchFunc<E_ extends Error = Error> = <T, E extends Error = E_>(
-  fn?: T | (() => T),
+  fn: T | (() => T),
   operationName?: string,
 ) => TryCatchResult<T, E>;
 
@@ -36,7 +36,7 @@ type TryCatch<
  * @returns A Result, or a Promise resolving to a Result, depending on fn.
  */
 export const tryCatch: TryCatch = <T, E extends Error = Error>(
-  fn?: T | (() => T),
+  fn: T | (() => T),
   operationName?: string,
 ) => {
   try {
