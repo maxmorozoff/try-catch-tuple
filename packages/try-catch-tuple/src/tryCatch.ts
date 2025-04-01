@@ -1,7 +1,7 @@
 type Branded<T> = T & { __tryCatchTupleResult: never };
 
 type DataErrorTuple<T, E> = Branded<
-  [data: T, error: E]
+  [data: T, error: E] & never[]
 >;
 
 type Success<T> = DataErrorTuple<T, null>;
