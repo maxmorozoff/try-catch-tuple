@@ -344,7 +344,8 @@ describe("tryCatch", () => {
 
   describe("edge cases", () => {
     test("should handle undefined fn", () => {
-      const [result, error] = tryCatch();
+      const [result, error] = tryCatch(undefined);
+      if (error) expect.unreachable();
       expect(result).toBe(undefined);
       expect(error).toBeNil();
     });
