@@ -1,7 +1,7 @@
 {
   "name": "@maxmorozoff/try-catch-tuple",
   "description": "A TypeScript utility function for structured error handling in both synchronous and asynchronous operations.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "author": "Max Morozov <max@morozov.page",
   "homepage": "https://github.com/maxmorozoff/try-catch-tuple#readme",
