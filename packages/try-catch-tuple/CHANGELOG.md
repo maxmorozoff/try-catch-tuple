@@ -1,5 +1,26 @@
 # @maxmorozoff/try-catch-tuple
 
+## 0.1.2
+
+### Patch Changes
+
+- 73951e0: docs:
+
+  - Add JSDoc for TryCatch types
+
+  chore:
+
+  - Export missing types
+  - Update default error type
+  - Update Branded type
+  - Update DataErrorTuple type (e.g., `rest` is now `never[]`)
+  - Restrict array methods on DataErrorTuple
+  - Make `fn` parameter required
+
+  refactor:
+
+  - Extract DataErrorTuple to type alias
+
 ## 0.1.1
 
 ### Patch Changes
