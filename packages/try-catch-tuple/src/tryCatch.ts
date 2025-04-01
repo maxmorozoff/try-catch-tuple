@@ -1,20 +1,20 @@
 type Branded<T> = T & { __tryCatchTupleResult: any };
 type Success<T> = Branded<[data: T, error: null]>;
-type Failure<E> = Branded<[data: null, error: E | Error]>;
-type Result<T, E> = Success<T> | Failure<E>;
+type Failure<E extends Error> = Branded<[data: null, error: E | Error]>;
+type Result<T, E extends Error> = Success<T> | Failure<E>;
 
-type TryCatchResult<T, E> = T extends Promise<infer U>
+type TryCatchResult<T, E extends Error> = T extends Promise<infer U>
   ? Promise<Result<U, E>>
   : Result<T, E>;
 
-type TryCatchFunc<E_ extends Error = never> = <T, E extends Error = E_>(
+type TryCatchFunc<E_ extends Error = Error> = <T, E extends Error = E_>(
   fn?: T | (() => T),
   operationName?: string,
 ) => TryCatchResult<T, E>;
 
 type TryCatch<
   F extends TryCatchFunc = TryCatchFunc,
-  E_ extends Error = never,
+  E_ extends Error = Error,
 > = F & {
   sync: <T, E extends Error = E_>(
     fn: () => T,
@@ -35,7 +35,7 @@ type TryCatch<
  * @param operationName Optional name for context.
  * @returns A Result, or a Promise resolving to a Result, depending on fn.
  */
-export const tryCatch: TryCatch = <T, E extends Error = never>(
+export const tryCatch: TryCatch = <T, E extends Error = Error>(
   fn?: T | (() => T),
   operationName?: string,
 ) => {
@@ -51,7 +51,7 @@ export const tryCatch: TryCatch = <T, E extends Error = never>(
   }
 };
 
-export const tryCatchSync: TryCatch["sync"] = <T, E extends Error = never>(
+export const tryCatchSync: TryCatch["sync"] = <T, E extends Error = Error>(
   fn: () => T,
   operationName?: string,
 ) => {
@@ -65,7 +65,7 @@ export const tryCatchSync: TryCatch["sync"] = <T, E extends Error = never>(
 
 export const tryCatchAsync: TryCatch["async"] = async <
   T,
-  E extends Error = never,
+  E extends Error = Error,
 >(
   fn: Promise<T> | (() => Promise<T>),
   operationName?: string,
