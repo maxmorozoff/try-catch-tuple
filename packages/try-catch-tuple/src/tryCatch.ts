@@ -7,20 +7,20 @@ type DataErrorTuple<T, E> = Branded<
   DisableArrayMethods<[data: T, error: E] & never[]>
 >;
 
-type Success<T> = DataErrorTuple<T, null>;
-type Failure<E extends Error> = DataErrorTuple<null, E | Error>;
-type Result<T, E extends Error> = Success<T> | Failure<E>;
+export type Success<T> = DataErrorTuple<T, null>;
+export type Failure<E extends Error> = DataErrorTuple<null, E | Error>;
+export type Result<T, E extends Error> = Success<T> | Failure<E>;
 
-type TryCatchResult<T, E extends Error> = T extends Promise<infer U>
+export type TryCatchResult<T, E extends Error> = T extends Promise<infer U>
   ? Promise<Result<U, E>>
   : Result<T, E>;
 
-type TryCatchFunc<E_ extends Error = Error> = <T, E extends Error = E_>(
+export type TryCatchFunc<E_ extends Error = Error> = <T, E extends Error = E_>(
   fn: T | (() => T),
   operationName?: string,
 ) => TryCatchResult<T, E>;
 
-type TryCatch<
+export type TryCatch<
   F extends TryCatchFunc = TryCatchFunc,
   E_ extends Error = Error,
 > = F & {
