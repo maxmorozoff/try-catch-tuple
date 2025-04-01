@@ -1,6 +1,11 @@
 type Branded<T> = T & { __tryCatchTupleResult: any };
-type Success<T> = Branded<[data: T, error: null]>;
-type Failure<E extends Error> = Branded<[data: null, error: E | Error]>;
+
+type DataErrorTuple<T, E> = Branded<
+  [data: T, error: E]
+>;
+
+type Success<T> = DataErrorTuple<T, null>;
+type Failure<E extends Error> = DataErrorTuple<null, E | Error>;
 type Result<T, E extends Error> = Success<T> | Failure<E>;
 
 type TryCatchResult<T, E extends Error> = T extends Promise<infer U>
