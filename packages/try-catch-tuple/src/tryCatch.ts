@@ -1,7 +1,10 @@
 type Branded<T> = T & { __tryCatchTupleResult: never };
+type DisableArrayMethods<T> = T & {
+  [K in Exclude<keyof Array<any>, "length" | symbol>]: never;
+};
 
 type DataErrorTuple<T, E> = Branded<
-  [data: T, error: E] & never[]
+  DisableArrayMethods<[data: T, error: E] & never[]>
 >;
 
 type Success<T> = DataErrorTuple<T, null>;
