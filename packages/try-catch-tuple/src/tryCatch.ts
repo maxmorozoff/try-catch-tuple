@@ -1,4 +1,4 @@
-type Branded<T> = T & { __tryCatchTupleResult: any };
+type Branded<T> = T & { __tryCatchTupleResult: never };
 
 type DataErrorTuple<T, E> = Branded<
   [data: T, error: E]
