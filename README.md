@@ -167,13 +167,11 @@ _(See more advanced `tryCatch` usage examples and API reference further down.)_
 npm i -D @maxmorozoff/try-catch-tuple @maxmorozoff/try-catch-tuple-ts-plugin ts-patch typescript
 
 # Or for utility + LSP only:
-# npm i -D @maxmorozoff/try-catch-tuple @maxmorozoff/try-catch-tuple-ts-plugin typescript
+npm i -D @maxmorozoff/try-catch-tuple @maxmorozoff/try-catch-tuple-ts-plugin typescript
 
 # Or for utility only:
-# npm i -D @maxmorozoff/try-catch-tuple typescript
+npm i -D @maxmorozoff/try-catch-tuple typescript
 ```
-
-Replace `@maxmorozoff/try-catch-tuple` and `@maxmorozoff/try-catch-tuple-ts-plugin` with the actual package names.
 
 ## Configuration (`tsconfig.json`)
 
