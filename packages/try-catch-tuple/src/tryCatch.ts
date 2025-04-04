@@ -10,7 +10,7 @@ type DataErrorTuple<T, E> = Branded<
 /**
  * Represents a successful result where `data` is present and `error` is `null`.
  */
-export type Success<T> = DataErrorTuple<T, null>;
+export type Success<T> = DataErrorTuple<Exclude<T, Error>, null>;
 
 /**
  * Represents a failure result where `error` contains an error instance and `data` is `null`.
@@ -20,7 +20,9 @@ export type Failure<E extends Error> = DataErrorTuple<null, E | Error>;
 /**
  * Represents the result of an operation that can either succeed with `T` or fail with `E`.
  */
-export type Result<T, E extends Error> = Success<T> | Failure<E>;
+export type Result<T, E extends Error> =
+  | Success<T>
+  | Failure<E | Extract<T, Error>>;
 
 /**
  * Resolves the return type based on whether `T` is a promise:
@@ -107,7 +109,7 @@ export const tryCatch: TryCatch = <T, E extends Error = Error>(
     if (result instanceof Promise)
       return tryCatchAsync(result, operationName) as TryCatchResult<T, E>;
 
-    return [result, null] as TryCatchResult<T, E>;
+    return handleResult<T, E>(result, operationName) as TryCatchResult<T, E>;
   } catch (rawError) {
     return handleError(rawError, operationName) as TryCatchResult<T, E>;
   }
@@ -119,7 +121,7 @@ export const tryCatchSync: TryCatch["sync"] = <T, E extends Error = Error>(
 ) => {
   try {
     const result = fn();
-    return [result, null] as Result<T, E>;
+    return handleResult<T, E>(result, operationName);
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
@@ -135,7 +137,7 @@ export const tryCatchAsync: TryCatch["async"] = async <
   try {
     const promise = typeof fn === "function" ? fn() : fn;
     const result = await promise;
-    return [result, null] as Result<Awaited<T>, E>;
+    return handleResult<Awaited<T>, E>(result, operationName);
   } catch (rawError) {
     return handleError(rawError, operationName);
   }
@@ -147,6 +149,22 @@ export const tryCatchErrors = <E extends Error>() =>
 tryCatch.sync = tryCatchSync;
 tryCatch.async = tryCatchAsync;
 tryCatch.errors = tryCatchErrors;
+
+// Handles a result which might be an error, annotates if needed
+function handleResult<T, E extends Error>(
+  result: T,
+  operationName?: string,
+): Result<T, E> {
+  if (!isError(result)) {
+    return [result, null] as Success<T>;
+  }
+
+  if (operationName) {
+    annotateErrorMessage(result, operationName);
+  }
+
+  return [null, result] as Failure<Extract<T, E>>;
+}
 
 // Handles a raw unknown error, ensures it's wrapped and annotated
 function handleError(rawError: unknown, operationName?: string) {
