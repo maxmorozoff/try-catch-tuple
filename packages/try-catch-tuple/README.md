@@ -103,6 +103,26 @@ console.log(nullError.cause); // null
 
 This ensures tryCatch always provides a proper error object.
 
+#### Return Error
+
+You can also return an `Error` instance instead of throwing it:
+
+```ts
+const [result, error] = tryCatch(() => {
+  if (Math.random() < 0.5) {
+    return new Error("Too small"); // Return Error instead of throwing it
+  }
+
+  return { message: "ok" };
+});
+if (!error) return result;
+//                 ^? const result: { message: string }
+error;
+// ^? const error: Error
+result;
+// ^? const result: null
+```
+
 #### Extending Error types
 
 ##### Option 1: Manually Set Result and Error Type
