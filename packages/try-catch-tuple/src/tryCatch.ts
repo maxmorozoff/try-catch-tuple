@@ -148,15 +148,29 @@ tryCatch.sync = tryCatchSync;
 tryCatch.async = tryCatchAsync;
 tryCatch.errors = tryCatchErrors;
 
+// Handles a raw unknown error, ensures it's wrapped and annotated
 function handleError(rawError: unknown, operationName?: string) {
-  const processedError =
-    rawError instanceof Error
-      ? rawError
-      : new Error(String(rawError), { cause: rawError });
+  const processedError = isError(rawError)
+    ? rawError
+    : new Error(String(rawError), { cause: rawError });
 
   if (operationName) {
-    processedError.message = `Operation "${operationName}" failed: ${processedError.message}`;
+    annotateErrorMessage(processedError, operationName);
   }
 
   return [null, processedError] as Failure<typeof processedError>;
+}
+
+// Utility to prefix error messages with operation context
+function annotateErrorMessage<E extends Error>(
+  error: E,
+  operationName: string,
+): void {
+  error.message = `Operation "${operationName}" failed: ${error.message}`;
+}
+
+// Type guards
+function isError(error: unknown): error is Error {
+  if (!error) return false;
+  return Error?.isError?.(error) ?? error instanceof Error;
 }
