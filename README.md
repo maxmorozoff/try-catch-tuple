@@ -163,14 +163,16 @@ _(See more advanced `tryCatch` usage examples and API reference further down.)_
 ## Installation
 
 ```bash
+# 1. Install the utility (prod dependency):
+npm i @maxmorozoff/try-catch-tuple 
+
+# 2. Install ts plugin (dev dependencies):
+
 # If using the build transformer, ts-patch is also required
-npm i -D @maxmorozoff/try-catch-tuple @maxmorozoff/try-catch-tuple-ts-plugin ts-patch typescript
+npm i -D @maxmorozoff/try-catch-tuple-ts-plugin ts-patch typescript
 
 # Or for utility + LSP only:
-npm i -D @maxmorozoff/try-catch-tuple @maxmorozoff/try-catch-tuple-ts-plugin typescript
-
-# Or for utility only:
-npm i -D @maxmorozoff/try-catch-tuple typescript
+npm i -D @maxmorozoff/try-catch-tuple-ts-plugin typescript
 ```
 
 ## Configuration (`tsconfig.json`)
@@ -222,16 +224,47 @@ Configure the tooling under `compilerOptions.plugins`.
 
 ## Usage
 
-**1. IDE (Language Service Plugin):**
+### 1. IDE (Language Service Plugin)
 
+- **Select Workspace TypeScript Version:** Ensure your editor is using the workspace's TypeScript version instead of the built-in one (e.g., VS Code: `TypeScript: Select TypeScript Version`).
 - **Restart TS Server:** After configuring the plugin, **restart the TypeScript Server** (e.g., VS Code: `TypeScript: Restart TS server`).
 - Errors will be underlined, and Quick Fixes will be available.
 
-**2. Build (Transformer):**
+### 2. Build (Transformer)
 
-- **Install `ts-patch`:** `npm i -D ts-patch` (if needed).
-- **Patch TypeScript:** `npx ts-patch install` (run once).
-- **Run Build:** Use `tspc` in your build scripts: `"build": "tspc -p tsconfig.json"`. Errors/warnings appear in `tsc` output.
+#### Method 1: Live Compiler
+
+The live compiler patches on-the-fly, each time it is run.
+
+**Via commandline:** Simply use `tspc` (instead of `tsc`)
+
+**With tools such as ts-node, webpack, ts-jest, etc:** specify the compiler as  `ts-patch/compiler`
+
+#### Method 2: Persistent Patch
+
+Persistent patch modifies the typescript installation within the `node_modules` path. It requires additional configuration
+to remain persisted, but it carries less load time and complexity compared to the live compiler.
+
+1. Install the patch
+
+```shell
+# For advanced options, see: ts-patch /?
+ts-patch install
+```
+
+2. Add `prepare` script (keeps patch persisted after npm install)
+
+`package.json`
+```jsonc
+{
+  /* ... */
+  "scripts": {
+    "prepare": "ts-patch install -s"
+  }
+}
+```
+
+For advanced options, see: [ts-patch docs](https://github.com/nonara/ts-patch?tab=readme-ov-file#usage)
 
 ## Configuration Options (Plugin & Transformer)
 

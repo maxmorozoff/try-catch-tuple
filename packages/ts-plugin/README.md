@@ -26,11 +26,13 @@ The primary goal is to prevent developers from incorrectly handling the results 
 
 ## Installation
 
+Add the following packages to your _development_ dependencies:
+
 ```bash
 # If using the build transformer, ts-patch is also required
 npm i -D @maxmorozoff/try-catch-tuple-ts-plugin ts-patch typescript
 # Or for LSP only:
-# npm i -D @maxmorozoff/try-catch-tuple-ts-plugin typescript
+npm i -D @maxmorozoff/try-catch-tuple-ts-plugin typescript
 ```
 
 ## Configuration (`tsconfig.json`)
@@ -104,32 +106,49 @@ This is the preferred way if using both, as configuration is shared.
 }
 ```
 
-
 ## Usage
 
-**1. IDE (Language Service Plugin):**
+### 1. IDE (Language Service Plugin)
 
-- **Restart TS Server:** After adding/changing the plugin configuration in `tsconfig.json`, you **must restart the TypeScript Server** in your editor.
-  - _VS Code:_ Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and run `TypeScript: Restart TS server`.
-- You should now see errors/warnings underlined in your code and have Quick Fixes available.
+- **Select Workspace TypeScript Version:** Ensure your editor is using the workspace's TypeScript version instead of the built-in one (e.g., VS Code: `TypeScript: Select TypeScript Version`).
+- **Restart TS Server:** After configuring the plugin, **restart the TypeScript Server** (e.g., VS Code: `TypeScript: Restart TS server`).
+- Errors will be underlined, and Quick Fixes will be available.
 
-**2. Build (Transformer):**
+### 2. Build (Transformer)
 
-- **Install `ts-patch`:** (If not already done) `npm i -D ts-patch`
-- **Patch TypeScript:** Run `npx ts-patch install` (or `yarn ts-patch install`) in your project root. This only needs to be done once or after updating TypeScript/ts-patch.
-- **Run Build:** Use `tspc` instead of `tsc` in your build scripts/commands.
+#### Method 1: Live Compiler
 
-  ```bash
-  # Example command
-  npx tspc -p tsconfig.json
+The live compiler patches on-the-fly, each time it is run.
 
-  # Example package.json script
+**Via commandline:** Simply use `tspc` (instead of `tsc`)
+
+**With tools such as ts-node, webpack, ts-jest, etc:** specify the compiler as  `ts-patch/compiler`
+
+#### Method 2: Persistent Patch
+
+Persistent patch modifies the typescript installation within the `node_modules` path. It requires additional configuration
+to remain persisted, but it carries less load time and complexity compared to the live compiler.
+
+1. Install the patch
+
+```shell
+# For advanced options, see: ts-patch /?
+ts-patch install
+```
+
+2. Add `prepare` script (keeps patch persisted after npm install)
+
+`package.json`
+ ```jsonc
+{
+  /* ... */
   "scripts": {
-    "build": "tspc -p tsconfig.json"
+    "prepare": "ts-patch install -s"
   }
-  ```
+}
+```
 
-  Build errors/warnings from the transformer will appear in the `tsc` output.
+For advanced options, see: [ts-patch docs](https://github.com/nonara/ts-patch?tab=readme-ov-file#usage)
 
 ## Configuration Options
 
