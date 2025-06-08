@@ -25,5 +25,8 @@ jobs:
         run: bun run build
       - name: Unit tests
         run: bun run test:unit
+      - name: Publish
+        if: github.event_name == 'pull_request'
+        run: bun x pkg-pr-new publish
       # TODO: upload coverage
       # - name: Upload coverage
