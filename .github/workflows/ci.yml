@@ -27,6 +27,6 @@ jobs:
         run: bun run test:unit
       - name: Publish
         if: github.event_name == 'pull_request'
-        run: bun x pkg-pr-new publish './packages/*'
+        run: bun x pkg-pr-new publish './packages/*' --template './examples/*'
       # TODO: upload coverage
       # - name: Upload coverage
