@@ -400,6 +400,66 @@ describe("tryCatch", () => {
     });
   });
 
+  describe("handleResult", () => {
+    test("should handle returned Error", () => {
+      const [result, error] = tryCatch(() => {
+        return new Error("test");
+      });
+      expect(result).toBeNil();
+      if (!error) expect.unreachable();
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("test");
+      error satisfies Error;
+    });
+
+    test("should handle returned async Error", async () => {
+      const [result, error] = await tryCatch(async () => {
+        return new Error("test");
+      });
+      expect(result).toBeNil();
+      if (!error) expect.unreachable();
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("test");
+      error satisfies Error;
+    });
+
+    describe("should handle multiple errors", () => {
+      /**
+       * @note Explicit return type is required!
+       *
+       * TypeScript automatically collapses `SyntaxError` into `Error` because `SyntaxError` extends `Error`.
+       * Without an explicit return type, TypeScript infers `Error | number`, discarding `SyntaxError`.
+       *
+       * By explicitly declaring `Error | SyntaxError | number`, we force TypeScript to retain `SyntaxError`
+       * instead of generalizing it into `Error`.
+       *
+       * Use of `.error<E>()` helper also resolves this.
+       */
+      const multipleErrorTypes = (n: number): Error | SyntaxError | number => {
+        if (n === 0) {
+          return new SyntaxError("test");
+        }
+        if (n === 1) {
+          return new Error("test");
+        }
+        return 1;
+      };
+
+      test.each([
+        [0, SyntaxError],
+        [1, Error],
+      ] as const)("should handle %s", (n, errorClass) => {
+        const [result, error] = tryCatch(() => multipleErrorTypes(n));
+        //             ^?
+        expect(result).toBeNil();
+        if (!error) expect.unreachable();
+        expect(error).toBeInstanceOf(errorClass);
+        expect(error.message).toBe("test");
+        error satisfies InstanceType<typeof errorClass>;
+      });
+    });
+  });
+
   describe("handleError", () => {
     const now = new Date();
     test.each([
