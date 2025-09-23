@@ -1,0 +1,77 @@
+@layer base, starlight, theme, components, utilities;
+
+@import "@astrojs/starlight-tailwind";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --font-sans: "Inter Variable";
+  --font-mono: "Commit Mono";
+
+  /* Generated accent color palettes. */
+  --color-accent-200: #cec3de;
+  --color-accent-600: #623e86;
+  --color-accent-900: #392a4a;
+  --color-accent-950: #281f33;
+  /* Generated gray color palettes. */
+  --color-gray-100: #f6f6fa;
+  --color-gray-200: #ecedf6;
+  --color-gray-300: #c0c1cc;
+  --color-gray-400: #89899e;
+  --color-gray-500: #565669;
+  --color-gray-700: #363648;
+  --color-gray-800: #252535;
+  --color-gray-900: #17171f;
+}
+
+@layer starlight.components {
+  .expressive-code .twoslash-popup-container,
+  .expressive-code .twoslash-static-container {
+    --ec-twoSlash-bg: var(--sl-color-bg-inline-code);
+    --ec-twoSlash-brdCol: var(--sl-color-accent-high);
+    border-radius: 0 !important;
+    /* padding-left: 0.5rem; */
+  }
+
+  .expressive-code .twoslash-static-container {
+    transform: translateX(-9px);
+    margin-top: 4px !important;
+  }
+
+  .expressive-code .twoslash-popup-container::before {
+    top: -4.8px !important;
+    left: 8px !important;
+  }
+
+  .expressive-code .twoslash-static-container::before {
+    top: -5.8px !important;
+    left: 8px !important;
+  }
+
+  .expressive-code .frame pre {
+    background-image: url("../assets/nnnoise.svg") !important;
+  }
+}
+
+@layer starlight {
+  @layer reset {
+    /* Override margin reset for file tree elements */
+    starlight-file-tree {
+      --x-space: 0.5rem;
+
+      & .tree-entry svg {
+        margin-inline: 0.25rem 0.375rem;
+      }
+
+      & .file.empty {
+        margin-inline: 1.25rem 0.375rem;
+      }
+    }
+
+    @media print {
+      starlight-file-tree {
+        font-size: .7em;
+      }
+    }
+  }
+}

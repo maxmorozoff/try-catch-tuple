@@ -1,0 +1,93 @@
+---
+title: Validation Tooling API
+---
+
+The `@maxmorozoff/try-catch-tuple-ts-plugin` package provides static analysis tooling to ensure the correct usage of the `tryCatch` utility. It includes a Language Service Plugin for real-time IDE feedback and a Build Transformer for compile-time validation.
+
+## Features
+
+-   **Strict Destructuring:** Enforces that results are destructured as `[data, error]` or `[data, ,]`.
+-   **Configurable Error Ignoring:** An option (`allowIgnoredError`) permits `[data, ,]` for explicitly ignoring the error.
+-   **Direct & Await Call Validation:** Catches errors in both sync (`tryCatch(...)`) and async (`await tryCatch(...)`) contexts.
+-   **Wrapped Call Detection:** Uses TypeScript's Type Checker and a unique "brand" on the result type to validate results from your own wrapper functions.
+-   **IDE Integration:** Provides real-time error highlighting and Quick Fixes in editors like VS Code.
+-   **Build-Time Checks:** Integrates with `tsc` via `ts-patch` to report errors or warnings during compilation, failing the build if necessary.
+-   **Configurable Severity:** Lets you decide whether violations should be treated as `"error"`s or `"warning"`s.
+
+## Configuration Options
+
+Configuration is shared between the Language Service Plugin and the Build Transformer.
+
+| Option              | Type                     | Default   | Description                                                                                                                                 |
+| :------------------ | :----------------------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `errorLevel`        | `"error"` \| `"warning"` | `"error"` | Sets the severity. When set to `"error"`, the transformer will cause the `tsc` build to fail upon validation errors.                            |
+| `allowIgnoredError` | `boolean`                | `true`    | If `true`, allows destructuring as `[data, ,]` to explicitly ignore the error element. If `false`, this pattern will be flagged as an error. |
+| `checkWrappedCalls` | `boolean`                | `true`    | If `true`, the tooling uses the Type Checker to analyze calls to functions other than `tryCatch` to see if they return the expected branded tuple type. |
+
+## Expected Result Type (Branded Tuple)
+
+The tooling is designed to work with functions that return a specific **branded tuple union** type. The brand is a unique property that allows the tooling to distinguish `tryCatch` results from other tuples in your codebase.
+
+```typescript
+// A brand interface with a unique property
+interface TryCatchBrand {
+  __tryCatchTupleResult: "marker";
+}
+
+// The success and failure types include the brand
+type Success<T> = TryCatchBrand & [data: T, error: null];
+type Failure<E> = TryCatchBrand & [data: null, error: E | Error];
+
+// The final result type is a union of the two
+export type Result<T, E = Error> = Success<T> | Failure<E>;
+```
+
+The presence of `__tryCatchTupleResult` is essential for the `checkWrappedCalls` feature to work correctly.
+
+## Validation Rules
+
+The tooling enforces the following rules on any function call that returns the branded tuple type.
+
+### Valid Usage
+
+```typescript
+// Standard destructuring
+const [data, error] = tryCatch(...);
+const [data, err] = await tryCatch(...);
+
+// Using an underscore for the error variable is allowed
+const [data, _] = tryCatch(...);
+
+// Explicitly ignoring the error (allowed by default via `allowIgnoredError: true`)
+const [data, ,] = tryCatch(...);
+
+// Correctly destructuring a wrapped call
+const wrapped = () => tryCatch(...);
+const [d, e] = wrapped();
+```
+
+### Invalid Usage
+
+```typescript
+// Error: Not destructured
+const result = tryCatch(...);
+
+// Error: Missing elements (expects 2 positions)
+const [data] = tryCatch(...);
+const [] = tryCatch(...);
+
+// Error: Too many elements
+const [data, error, extra] = tryCatch(...);
+
+// Error: Incorrectly destructuring a wrapped call
+const wrapped = () => tryCatch(...);
+const [d] = wrapped();
+const res = await wrapped();
+```
+
+## Code Fixes (IDE)
+
+When the Language Service Plugin detects an invalid pattern in your editor, it will offer two Quick Fixes:
+
+1.  **`Destructure return as [result, error]`**: The primary fix, which corrects the invalid pattern to the standard `[result, error]` destructuring.
+2.  **`Destructure return as [result, ,] (ignore error)`**: An alternative fix that explicitly ignores the error. This option is only available if `allowIgnoredError` is set to `true`.

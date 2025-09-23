@@ -1,0 +1,264 @@
+---
+title: Utility API
+---
+
+The `@maxmorozoff/try-catch-tuple` package provides the core `tryCatch` utility for structured error handling.
+
+## Features
+
+-   Handles both synchronous and asynchronous functions/promises.
+-   Returns a structured, branded tuple `[data, error]`.
+-   Provides named operations (`tryCatch(fn, "Operation Name")`) for better debugging context in errors.
+-   Includes `tryCatch.sync` and `tryCatch.async` for explicit handling.
+-   Allows custom error types via `.errors<E>()`.
+-   Ensures all thrown values are normalized into `Error` instances.
+
+## Basic Usage
+
+### Synchronous Operations
+
+```typescript
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+function parseJson(str: string) {
+  const [result, error] = tryCatch(() => JSON.parse(str) as { id: number });
+  //     ^? const result: { id: number } | null
+
+  if (error) {
+    // Always check the error!
+    console.error("Parsing failed:", error); // `error` is an `Error` instance
+    //                               ^? const error: Error
+    return null;
+  }
+
+  // Type refinement works here
+  return result; // ✅ result: { id: number }
+}
+```
+
+### Asynchronous Operations
+
+```typescript
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+async function fetchUser(id: number): Promise<User> {
+  // ... fetch logic
+  if (id < 0) throw new Error("Invalid ID");
+  return { name: "Alice" };
+}
+
+async function getUser(id: number) {
+  const [user, error] = await tryCatch(fetchUser(id));
+  //     ^? const user: User | null
+
+  if (error) {
+    console.error(`Failed to get user ${id}:`, error.message);
+    return null;
+  }
+
+  return user; // ✅ user: User
+}
+```
+
+## Named Operations for Debugging
+
+You can provide an `operationName` to add context to errors, making them easier to debug.
+
+```ts
+const [result, error] = tryCatch((): void => {
+  throw new Error("Failed to fetch data");
+}, "Fetch Data");
+
+// error?.message will be:
+// "Operation \"Fetch Data\" failed: Failed to fetch data"
+```
+
+## Explicit Sync/Async
+
+For clarity, you can use the explicit `sync` and `async` methods.
+
+```ts
+// Explicitly handle a synchronous operation
+const [resSync, errSync] = tryCatch.sync(() => /* sync op */);
+
+// Explicitly handle an asynchronous operation
+const [resAsync, errAsync] = await tryCatch.async(async () => /* async op */);
+```
+
+## Handling & Customizing Errors
+
+### Error Normalization
+
+If a non-`Error` value is thrown, `tryCatch` automatically wraps it in an `Error` instance. This guarantees you always receive a proper error object.
+
+```ts
+const [, error] = tryCatch(() => {
+  throw "Oops";
+});
+// `error` is an instance of Error, and `error.message` is "Oops"
+
+const [, nullError] = tryCatch(() => {
+  throw null;
+});
+// `nullError` is an instance of Error, and `nullError.message` is "null"
+```
+
+### Custom Error Types
+
+You can specify expected error types to improve type safety.
+
+#### Option 1: Manual Type Annotation
+
+```ts
+type UserError = SyntaxError | NetworkError;
+
+const [user, error] = await tryCatch<Promise<User>, UserError>(fetchUser(1));
+// error type: UserError | Error | null
+// user type: User | null
+```
+
+#### Option 2: `.errors<E>()` Helper
+
+The `.errors<E>()` helper provides a more fluent way to specify custom error types while inferring the data type.
+
+```ts
+type UserError = SyntaxError | NetworkError;
+
+const [user, error] = await tryCatch.errors<UserError>()(fetchUser(1));
+// error type: UserError | Error | null
+// user type: User (inferred from fetchUser) | null
+```
+
+## Wrapping Functions
+
+To avoid repetition, you can wrap functions that perform common operations.
+
+```ts
+const getUser = (id: number) =>
+  tryCatch
+    .errors<RangeError | SyntaxError>() // Chain errors for better typing
+    .async(fetchUser(id)); // Use .async helper if the function is async
+
+async function main() {
+  const [user, error] = await getUser(1);
+  if (error) {
+    // `error` type includes RangeError, SyntaxError, and base Error
+    /* ... */
+  }
+}
+```
+
+## React Server Components (RSC) Example
+
+`tryCatch` is well-suited for data fetching in RSCs, providing a clean way to handle loading and error states.
+
+```tsx
+const getUser = (id: number) => tryCatch.errors<SpecificError>()(fetchUser(id));
+
+async function UserPage({ id }: { id: number }) {
+  const [user, error] = await getUser(id);
+
+  if (error) {
+    // Handle specific errors or show a generic message
+    if (error instanceof SpecificError) {
+      return <div>A specific error occurred.</div>;
+    }
+    return <div>User not found or an error occurred.</div>;
+  }
+
+  return <div>Hello {user.name}!</div>;
+}
+```
+
+## Comparison with `try...catch`
+
+`tryCatch` helps avoid deeply nested `try...catch` blocks, especially when handling sequential operations that can fail.
+
+```ts
+// ✅ Using tryCatch for sequential fallbacks
+const getData = async () => {
+  let [data, err] = await tryCatch(failingOperation1);
+  if (!err) return Response.json({ data });
+
+  [data, err] = await tryCatch(failingOperation2);
+  if (!err) return Response.json({ data });
+
+  [data, err] = await tryCatch(successfulOperation);
+  if (!err) return Response.json({ data });
+
+  return Response.error();
+};
+
+// ❌ Traditional try...catch leads to deep nesting
+const getDataStandard = async () => {
+  try {
+    const data = await failingOperation1();
+    return Response.json({ data });
+  } catch (err) {
+    try {
+      const data = await failingOperation2();
+      return Response.json({ data });
+    } catch (err) {
+      try {
+        const data = await successfulOperation();
+        return Response.json({ data });
+      } catch (err) {
+        return Response.error();
+      }
+    }
+  }
+};
+```
+
+## API Reference
+
+### Main Function
+
+```ts
+tryCatch<T, E extends Error = never>(
+  fn?: (() => T) | T | Promise<T> | (() => Promise<T>),
+  operationName?: string
+): Result<T, E>
+```
+
+-   Handles values, sync/async functions, and promises automatically.
+
+### Explicit Synchronous Handling
+
+```ts
+tryCatch.sync<T, E extends Error = never>(
+  fn: () => T,
+  operationName?: string
+): Result<T, E>
+```
+
+### Explicit Asynchronous Handling
+
+```ts
+tryCatch.async<T, E extends Error = never>(
+  fn: Promise<T> | (() => Promise<T>),
+  operationName?: string
+): Promise<Result<T, E>>
+```
+
+### Result Type
+
+The utility returns a branded tuple to enable static analysis by the [validation tooling](/try-catch-tuple/tooling-api/).
+
+```ts
+type Result<T, E = Error> = ([data: T, error: null] | [data: null, error: E]) &
+  { __tryCatchTupleResult: "marker" };
+```
+
+## Edge Cases
+
+```ts
+// Handles undefined and null inputs gracefully
+tryCatch(undefined); // Returns [undefined, null]
+tryCatch(null);      // Returns [null, null]
+
+// Catches and normalizes thrown errors
+tryCatch(() => { throw new Error("Unexpected Error"); }); // Returns [null, Error]
+
+// Handles rejected promises
+tryCatch(Promise.reject(new Error("Promise rejected")));
