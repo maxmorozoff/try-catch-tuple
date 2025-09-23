@@ -20,7 +20,7 @@
     "lint": "biome check"
   },
   "packageManager": "bun@1.2.2",
-  "workspaces": ["packages/*", "examples/*"],
+  "workspaces": ["packages/*", "examples/*", "website"],
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.28.1",

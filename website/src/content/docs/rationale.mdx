@@ -1,0 +1,74 @@
+---
+title: Rationale
+---
+
+This page explains the design decisions behind `reTuple`, including the "error-last" pattern, the use of tuples, and the dedicated tooling.
+
+## Rationale: Error Last & Tooling
+
+Traditional Node.js error handling often uses callbacks with `(error, data)`. Many modern utilities and proposals also adopt an "error first" tuple `[error, data]`.
+
+This library takes a different approach, placing the **error last (`[data, error]`)**, similar to Go.
+
+**Why `error` last?**
+
+-   **Scanning Intent:** When fetching or processing data, the primary goal is often the `data`. Placing it first aligns the code structure with the primary intent, potentially making success paths easier to visually scan. Code often reads like "get the data, then check for an error".
+-   **Intuition:** For developers familiar with Go or similar paradigms, this can feel more natural.
+
+**The Challenge: Explicit Error Handling**
+
+A potential downside of the error-last pattern is the risk of accidentally forgetting to check the `error` value. As discussed in the community, error handling should ideally be explicit. Swallowing errors silently is dangerous.
+
+**The Solution: Tooling Enforcement**
+
+This repository strongly advocates for using the provided **TypeScript tooling** alongside the `tryCatch` utility. The Language Service Plugin and Build Transformer act as a safety net:
+
+-   They **enforce** that the returned tuple is destructured correctly (`[data, error]` or `[data, ,]`).
+-   They prevent accidentally ignoring the error (e.g., `const [data] = tryCatch(...)` or `const result = tryCatch(...)`).
+-   This allows developers to benefit from the potential readability of the error-last pattern while **mitigating the risk** of unhandled errors through compile-time and IDE checks.
+
+Essentially, we leverage TypeScript's powerful type system and tooling capabilities to make the error-last pattern safe and explicit.
+
+## Why a Tuple (`[data, error]`) Return Type?
+
+While other libraries or patterns might return an object like `{ data: T, error: E }`, this utility deliberately uses a tuple `[data, error]`. This decision is intertwined with the "Error Last" rationale and the emphasis on tooling:
+
+1.  **Explicit Handling Encouraged:** With an object `{ data, error }`, it's syntactically very easy to ignore the error property simply by omitting it during destructuring:
+
+    ```typescript
+    // Easy to forget the error without tooling
+    const { data } = tryCatchReturningObject(...); // 'error' is implicitly ignored
+    ```
+
+    While convenient, this increases the risk of accidentally swallowing errors if the developer forgets to handle the `error` case separately. The tuple structure `[data, error]` forces the developer to acknowledge both positions during destructuring.
+
+2.  **Cleaner Renaming (Especially for Data):** Renaming during destructuring is arguably more straightforward for the primary `data` value with tuples:
+
+    ```typescript
+    // Tuple Renaming
+    const [user, userError] = tryCatch(...); // 'user' directly gets the data
+
+    // Object Renaming
+    const { data: user, error: userError } = tryCatchReturningObject(...); // Requires explicit 'data:' label
+    ```
+
+    While minor, it keeps the focus on the primary success value when renaming.
+
+3.  **Tooling Makes Tuples Safe:** The potential drawback of tuples (like forgetting which index is which, although named tuples mitigate this) is less significant when paired with the TypeScript plugin/transformer. The tooling enforces that _both_ elements are acknowledged (either `[data, error]` or `[data, ,]` if allowed), effectively preventing the accidental ignoring of the `error` element, which was the main safety concern with the tuple pattern.
+
+4.  **Future Considerations (Object/Combined Approach):** We recognize the ergonomic benefits an object-based or combined approach can offer. While the current focus is on the tuple pattern enforced by tooling, **we may explore supporting an object-based return type as a configurable option in the future.** Contributions towards this are welcome! The goal would be to ensure any approach maintains explicit error handling, potentially through enhanced tooling checks specific to the object pattern.
+
+## Why a TypeScript Plugin/Transformer (vs. ESLint)?
+
+While ESLint is a powerful and widely-used linting tool, we chose to implement this validation logic directly within the TypeScript ecosystem (as a Language Service Plugin and a Build Transformer) for several key reasons:
+
+1.  **Deep Type System Integration:** The core requirement of validating wrapped function calls (`checkWrappedCalls: true`) necessitates understanding the _return types_ of functions. This requires deep integration with TypeScript's Type Checker, which is readily available within TS Plugins and Transformers but often more complex or less performant to achieve accurately within ESLint rules.
+2.  **Build Process Integration (`tsc`):** The build transformer integrates directly into the `tsc` compilation process via `ts-patch`. This ensures that validation failures (when configured as errors) block the build itself, providing a strong guarantee of correctness before code is shipped.
+3.  **Real-time IDE Feedback:** Language Service Plugins offer the tightest integration with editors like VS Code, providing instant feedback, squiggles, and code fixes as you type.
+4.  **Evolving Linting Landscape:** While ESLint remains dominant, the ecosystem for linting and formatting JavaScript/TypeScript is evolving, with tools like Biome gaining traction. Focusing on TypeScript's own extension points provides a robust solution tied directly to the language itself.
+
+**ESLint Rule Possibility:**
+
+That being said, an ESLint rule _could_ potentially be developed to cover at least the _basic_ destructuring validation. Implementing the type-checking required for wrapped calls would be the main challenge.
+
+**We welcome contributions!** If you're interested in developing and maintaining an ESLint plugin for this utility, please feel free to open an issue or pull request to discuss it.

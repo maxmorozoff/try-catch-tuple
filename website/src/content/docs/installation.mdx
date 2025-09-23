@@ -1,0 +1,121 @@
+---
+title: Installation & Configuration
+---
+import { PackageManagers } from 'starlight-package-managers';
+import { Steps } from '@astrojs/starlight/components';
+
+This guide covers how to install and configure the `reTuple` utility and its associated validation tooling.
+
+## Installation
+
+You'll need to install the utility package and the TypeScript plugin.
+
+<Steps>
+
+1.  **Install the utility** (production dependency):
+    <PackageManagers pkgManagers={["npm", "yarn", "pnpm", "bun", "ni"]} pkg="@maxmorozoff/try-catch-tuple" title='Installing dependencies…' />
+
+2.  **Install the TS plugin and `ts-patch`** (dev dependencies):
+    <PackageManagers pkgManagers={["npm", "yarn", "pnpm", "bun", "ni"]} pkg="@maxmorozoff/try-catch-tuple-ts-plugin ts-patch typescript" dev title='Installing dependencies…' />
+
+    > **Note**
+    > `ts-patch` is required if you want to use the build transformer for compile-time checks. If you only need IDE feedback (LSP), you can omit it.
+
+</Steps>
+
+## Configuration (`tsconfig.json`)
+
+The tooling is configured within your `tsconfig.json` under `compilerOptions.plugins`.
+
+### Combined LSP & Transformer (Recommended)
+
+This setup provides both real-time IDE feedback and build-time validation. It requires `ts-patch`.
+
+```jsonc ins={6-13}
+// tsconfig.json
+{
+  "compilerOptions": {
+    // ... your other options
+    "plugins": [
+      {
+        "name": "@maxmorozoff/try-catch-tuple-ts-plugin", // For LSP
+        "transform": "@maxmorozoff/try-catch-tuple-ts-plugin/transformer", // For Build
+        // --- SHARED Configuration (applies to both) ---
+        "errorLevel": "error",       // Default: "error"
+        "allowIgnoredError": true, // Default: true
+        "checkWrappedCalls": true  // Default: true
+      }
+    ]
+  }
+}
+```
+
+### LSP Plugin Only
+
+If you only want IDE feedback and don't need the build-time transformer, use this configuration.
+
+```jsonc ins={6-12}
+// tsconfig.json
+{
+  "compilerOptions": {
+    // ... your other options
+    "plugins": [
+      {
+        "name": "@maxmorozoff/try-catch-tuple-ts-plugin",
+        // --- Optional Configuration for LSP ---
+        "errorLevel": "error",
+        "allowIgnoredError": true,
+        "checkWrappedCalls": true
+      }
+    ]
+  }
+}
+```
+
+## Usage
+
+### 1. IDE (Language Service Plugin)
+
+To get real-time feedback in your editor (like VS Code):
+
+1.  **Select Workspace TypeScript Version:** Ensure your editor is using your project's installed version of TypeScript, not its own built-in version.
+    *   In VS Code, open a `.ts` file and click the version number in the status bar, then select "Use Workspace Version".
+2.  **Restart TS Server:** After configuring the plugin, you must restart the TypeScript Server for the changes to take effect.
+    *   In VS Code, open the Command Palette (`Ctrl+Shift+P`) and run `TypeScript: Restart TS server`.
+
+You should now see errors underlined in your editor with quick fixes available.
+
+### 2. Build (Transformer)
+
+To enable build-time checks, you need to use `ts-patch`.
+
+#### Method 1: Live Compiler
+
+The live compiler patches `tsc` on-the-fly each time it is run.
+
+-   **Command Line:** Use `tspc` instead of `tsc` to compile your project.
+-   **Tooling:** For tools like `ts-node`, `webpack`, or `ts-jest`, configure them to use `ts-patch/compiler` as the TypeScript compiler.
+
+#### Method 2: Persistent Patch
+
+This method modifies the TypeScript installation in your `node_modules` directory. It has a lower overhead than the live compiler but requires a `prepare` script to remain active after `npm install`.
+
+
+<Steps>
+
+1.  **Install the patch:**
+    <PackageManagers pkgManagers={["npm", "yarn", "pnpm", "bun", "ni"]} type="exec" pkg="ts-patch" args="install" title='Patching the TypeScript compiler…' />
+
+2.  **Add `prepare` script to `package.json`:**
+    ```jsonc ins={4}
+    // package.json
+    {
+      "scripts": {
+        "prepare": "ts-patch install -s"
+      }
+    }
+    ```
+
+</Steps>
+
+This ensures the patch is automatically reapplied whenever dependencies are installed. For more details, see the [ts-patch documentation](https://github.com/nonara/ts-patch).

@@ -1,0 +1,811 @@
+---
+title: Usage Guide
+description: Practical patterns, conventions, and wrapper techniques for adopting the tryCatch tuple utility effectively.
+# draft: true # TODO: review AI generated doc
+---
+
+This guide expands on the rationale and gives **actionable patterns** for using `@maxmorozoff/try-catch-tuple` in real projects. It focuses on:
+
+- Establishing **consistency** in how you wrap operations.
+- Designing **thin, intention-revealing wrappers**.
+- Keeping error handling **explicit and localized**.
+- Leveraging the TypeScript Plugin / Transformer to **enforce correctness**.
+- Building **domain-specific helpers** on top of the primitive `[data, error]` pattern.
+
+:::tip
+If you are new to the utility, read the Introduction first, then return here for architectural patterns.
+:::
+
+---
+
+## Core Philosophy Recap
+
+1. Treat `[data, error]` as a **branching point**—handle *immediately or explicitly propagate*.
+2. Wrap **side-effectful or failure-prone boundaries**: I/O, parsing, external services.
+3. Give operations **names** (`operationName`) when they cross logical or infrastructural boundaries—this enriches error context.
+
+---
+
+## Golden Pattern
+
+Every potentially failing call looks structurally the same:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+async function possiblyFailingWork() {
+  return '';
+}
+
+// @noErrors
+// ---cut---
+const [result, error] = await tryCatch(possiblyFailingWork, "Human Friendly Operation");
+//     ^?
+if (error) {
+  // Handle, map, log, rethrow, or return upstream
+
+  result; // Note the type
+  // ^?
+  return error.message;
+}
+// Continue with refined `result`
+result;
+// ^?
+```
+
+Because this repeats often, move the risky part behind a small wrapper:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+interface User {};
+
+// @noErrors
+// ---cut---
+async function fetchUser(userId: string) {
+  return tryCatch.async(
+    () => fetch(`https://api.example.com/users/${userId}`).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<User>;
+    }),
+    "Fetch User"
+  );
+}
+
+// Usage
+const [ user, userErr ] = await fetchUser("123");
+//      ^?
+if (userErr) { 
+  /* ... */ 
+  return;
+}
+// Continue with refined `user`
+user;
+// ^?
+```
+
+---
+
+## When to Introduce a Wrapper
+
+Wrap an operation if ANY of these apply:
+
+| Condition                                | Wrap? | Reason                                                                      |
+|------------------------------------------|-------|-----------------------------------------------------------------------------|
+| `try...catch` is used                    | Yes   | Eliminates `try..catch` usage and deeply nested code.                       |
+| External boundary (network, FS, DB)      | Yes   | Stabilizes error shape / context.                                           |
+| Complex parsing / transformation         | Yes   | Isolates failure + naming improves debuggability.                           |
+| Single, trivial computation, no throw    | No    | Just return the value.                                                      |
+| Hot path performance concern             | Maybe | Measure first; overhead is minimal but still a function boundary.           |
+
+---
+
+## Naming Operations Well
+
+Pick *contextual*, *action-based* phrases:
+
+- "Fetch User Profile"
+- "Parse Settings JSON"
+- "Write Cache File"
+- "Open DB Transaction"
+- "Render Markdown"
+
+Avoid over‑specific internal details (e.g., "fs.readFileSync user.json" → prefer "Load User Cache File").
+
+---
+
+## Error Taxonomy & Narrowing
+
+Use `.errors<E>()` to express expected domain or infra error classes:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+interface Post {};
+
+// ---cut---
+class NetworkError extends Error {}
+class DecodeError extends Error {}
+class NotFoundError extends Error {}
+
+const getPost = (id: string) =>
+  tryCatch
+    .errors<NetworkError | DecodeError | NotFoundError>()
+    .async(async () => {
+      const res = await fetch(`/posts/${id}`);
+      if (res.status === 404) throw new NotFoundError("Post not found");
+      if (!res.ok) throw new NetworkError(`Status ${res.status}`);
+      try {
+        return (await res.json()) as Post;
+      } catch {
+        throw new DecodeError("Invalid post JSON");
+      }
+    }, "Fetch Post");
+```
+
+Downstream:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+interface Post {};
+
+class NetworkError extends Error {}
+class DecodeError extends Error {}
+class NotFoundError extends Error {}
+
+const getPost = (id: string) =>
+  tryCatch
+    .errors<NetworkError | DecodeError | NotFoundError>()
+    .async(async () => {
+      const res = await fetch(`/posts/${id}`);
+      if (res.status === 404) throw new NotFoundError("Post not found");
+      if (!res.ok) throw new NetworkError(`Status ${res.status}`);
+      try {
+        return (await res.json()) as Post;
+      } catch {
+        throw new DecodeError("Invalid post JSON");
+      }
+    }, "Fetch Post");
+
+function handleNetwork(error: NetworkError) { /* ... */ }
+function handleCorrupt(error: DecodeError) { /* ... */ }
+function handleMissing(error: NotFoundError) { /* ... */ }
+function handleGeneric(error: Error) { /* ... */ }
+
+// @noErrors
+// ---cut---
+const [post, postErr] = await getPost("42");
+if (postErr) {
+  if (postErr instanceof NetworkError) 
+    return handleNetwork(postErr);
+  if (postErr instanceof DecodeError) 
+    return handleCorrupt(postErr);
+  if (postErr instanceof NotFoundError) 
+    return handleMissing(postErr);
+  // fallback generic
+  return handleGeneric(postErr);
+}
+```
+
+---
+
+## Common Wrapper Library (Recommended)
+
+Create a `utils/` or `lib/` module that centralizes patterns.
+
+### 1. Safe JSON Parsing
+
+```ts twoslash
+// ./src/lib/json.ts
+// @noErrors
+// ---cut---
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+export const parseJson = <T = unknown>(raw: string, operationName = "Parse JSON") =>
+  tryCatch(() => JSON.parse(raw) as T, operationName);
+```
+
+Usage:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+const parseJson = <T = unknown>(raw: string, operationName = "Parse JSON") =>
+  tryCatch(() => JSON.parse(raw) as T, operationName);
+interface User {};
+// @noErrors
+// ---cut---
+const [user, parseErr] = parseJson<User>(rawResponse, "Parse User JSON");
+if (!parseErr) return user;
+```
+
+### 2. Safe Fetch (Generic)
+
+```ts twoslash
+// ./src/lib/fetch.ts
+// @noErrors
+// ---cut---
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+export interface SafeFetchOptions extends RequestInit {
+  expectJson?: boolean;
+  operationName?: string;
+}
+
+export function safeFetch<T = unknown>(
+  input: RequestInfo | URL,
+  { expectJson = true, operationName = "Fetch", ...init }: SafeFetchOptions = {}
+) {
+  return tryCatch.async(async () => {
+    const res = await fetch(input, init);
+    if (!res.ok) {
+      // Optionally collect headers / body snippet
+      throw new Error(`HTTP ${res.status} for ${operationName}`);
+    }
+    if (!expectJson) return res as unknown as T;
+    return (await res.json()) as T;
+  }, operationName);
+}
+```
+
+Usage:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+interface SafeFetchOptions extends RequestInit {
+  expectJson?: boolean;
+  operationName?: string;
+}
+
+export function safeFetch<T = unknown>(
+  input: RequestInfo | URL,
+  { expectJson = true, operationName = "Fetch", ...init }: SafeFetchOptions = {}
+) {
+  return tryCatch.async(async () => {
+    const res = await fetch(input, init);
+    if (!res.ok) {
+      // Optionally collect headers / body snippet
+      throw new Error(`HTTP ${res.status} for ${operationName}`);
+    }
+    if (!expectJson) return res as unknown as T;
+    return (await res.json()) as T;
+  }, operationName);
+}
+
+interface User {};
+const id: string = "73";
+// @noErrors
+// ---cut---
+const [user, userErr] = await safeFetch<User>(`/api/users/${id}`, {
+  operationName: "Fetch User",
+});
+if (!userErr) {
+  // Use user
+  return user;
+} else {
+  // Handle error
+  console.error(userErr);
+}
+```
+
+### 3. Safe File System (Node)
+
+```ts twoslash
+// ./src/lib/fs.ts
+// @noErrors
+// ---cut---
+import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+export const readFileSafe = (path: string, encoding: BufferEncoding = "utf8") =>
+  tryCatch.async(() => fs.readFile(path, { encoding }), `Read File: ${path}`);
+
+export const writeFileSafe = (path: string, data: string | Buffer) =>
+  tryCatch.async(async () => {
+    await fs.mkdir(dirname(path), { recursive: true });
+    await fs.writeFile(path, data);
+    return true;
+  }, `Write File: ${path}`);
+
+export const jsonFileSafe = <T = unknown>(path: string) =>
+  tryCatch.async(async () => {
+    const content = await fs.readFile(path, "utf8");
+    return JSON.parse(content) as T;
+  }, `Read JSON File: ${path}`);
+```
+
+Usage:
+
+```ts twoslash
+import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+export const readFileSafe = (path: string, encoding: BufferEncoding = "utf8") =>
+  tryCatch.async(() => fs.readFile(path, { encoding }), `Read File: ${path}`);
+
+export const writeFileSafe = (path: string, data: string | Buffer) =>
+  tryCatch.async(async () => {
+    await fs.mkdir(dirname(path), { recursive: true });
+    await fs.writeFile(path, data);
+    return true;
+  }, `Write File: ${path}`);
+
+export const jsonFileSafe = <T = unknown>(path: string) =>
+  tryCatch.async(async () => {
+    const content = await fs.readFile(path, "utf8");
+    return JSON.parse(content) as T;
+  }, `Read JSON File: ${path}`);
+
+interface Cache {};
+
+// @noErrors
+// ---cut---
+export function readCache() {
+  return jsonFileSafe<Cache>("./cache.json")
+}
+
+const [cache, cacheErr] = await readCache();
+if (!cacheErr) {
+  // Use cache
+  return cache;
+} else {
+  // Handle error
+  console.error(cacheErr);
+}
+```
+
+
+### 4. Safe Database Query
+
+```ts
+export function safeQuery<T>(run: () => Promise<T>, label = "DB Query") {
+  return tryCatch.async(run, label);
+}
+
+// Usage
+const [rows, dbErr] = await safeQuery(() => pool.query<Row>("SELECT * FROM x"), "Fetch Rows");
+```
+
+### 5. Safe Transaction (Pattern)
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+declare const db: {
+  begin: () => Promise<void>;
+  commit: () => Promise<string>;
+  rollback: () => Promise<void>;
+};
+
+interface User {};
+
+// @noErrors
+// ---cut---
+export function safeTx<T>(run: () => Promise<T>) {
+  return tryCatch.async(async () => {
+    await db.begin();
+
+    const [data, runError] = await tryCatch.async(run(), 'Run Transaction');
+    if (runError) {
+      await db.rollback();
+      throw runError;
+    }
+
+    const [commit, commitError] = await tryCatch.async(db.commit(), 'Commit Transaction');
+    if (commitError) {
+      await db.rollback();
+      throw commitError;
+    }
+
+    return { data, commit };
+  })
+}
+
+export const safeTx = <T>(run: () => Promise<T>) => tryCatch.async(async (run = run) => {
+  await db.begin();
+
+  const [data, runError] = await tryCatch.async(run(), 'Run Transaction');
+  if (runError) {
+    await db.rollback();
+    throw runError;
+  }
+
+  const [commit, commitError] = await tryCatch.async(db.commit(), 'Commit Transaction');
+  if (commitError) {
+    await db.rollback();
+    throw commitError;
+  }
+
+  return { data, commit };
+})
+
+// Usage
+const [txResult, txErr] = await safeTx(async (): Promise<User> => {
+  // ...
+})
+if (!txErr) {
+  // Use txResult
+  return txResult;
+} else {
+  // Handle error
+  console.error(txErr);
+}
+```
+{/* 
+TODO:
+
+### 6. Safe Concurrency (Map All / Settle)
+
+```ts
+export async function allSafe<T>(promises: Array<Promise<T>>) {
+  return tryCatch.async(() => Promise.all(promises), "Promise.all batch");
+}
+
+export async function settleSafe<T>(promises: Array<Promise<T>>) {
+  return tryCatch.async(() => Promise.allSettled(promises), "Promise.allSettled batch");
+}
+``` */}
+
+---
+
+## Layered Wrappers: Narrowing Further Upstream
+
+Build layers:
+
+1. Low-level raw boundary (fetch / fs).
+2. Mid-level parser / shape validator.
+3. High-level domain function returning rich domain object.
+
+Example:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+interface SafeFetchOptions extends RequestInit {
+  expectJson?: boolean;
+  operationName?: string;
+}
+
+export function safeFetch<T = unknown>(
+  input: Parameters<typeof fetch>[0],
+  { expectJson = true, operationName = "Fetch", ...init }: SafeFetchOptions = {}
+) {
+  return tryCatch.async(async () => {
+    const res = await fetch(input, init);
+    if (!res.ok) {
+      // Optionally collect headers / body snippet
+      throw new Error(`HTTP ${res.status} for ${operationName}`);
+    }
+    if (!expectJson) return res as unknown as T;
+    return (await res.json()) as T;
+  }, operationName);
+}
+
+interface User {};
+const userSchema = {
+  parse: (raw: unknown): User =>({} as User),
+};
+// ---cut---
+const fetchRawUser = (id: string) =>
+  safeFetch<unknown>(`/api/users/${id}`, { operationName: "Fetch Raw User" });
+
+const parseUser = (raw: unknown) =>
+  tryCatch(() => userSchema.parse(raw), "Validate User Schema");
+
+export async function getUser(id: string) {
+  return tryCatch.async(async () => {
+    const [raw, fetchErr] = await fetchRawUser(id);
+    if (fetchErr) throw fetchErr;
+
+    const [user, parseErr] = parseUser(raw);
+    if (parseErr) throw parseErr;
+
+    return user;
+  }, 'Get User');
+}
+```
+
+This produces _separate_, context-rich failures (Fetch vs Validate), instead of one big ambiguous error.
+
+---
+
+## Composing Results
+
+Sometimes you need to chain multiple dependent operations:
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
+
+export const parseJson = <T = unknown>(raw: string, operationName = "Parse JSON") =>
+  tryCatch(() => JSON.parse(raw) as T, operationName);
+
+export const readFileSafe = (path: string, encoding: BufferEncoding = "utf8") =>
+  tryCatch.async(() => fs.readFile(path, { encoding }), `Read File: ${path}`);
+
+export const writeFileSafe = (path: string, data: string | Buffer) =>
+  tryCatch.async(async () => {
+    await fs.mkdir(dirname(path), { recursive: true });
+    await fs.writeFile(path, data);
+    return true;
+  }, `Write File: ${path}`);
+
+export const jsonFileSafe = <T = unknown>(path: string) =>
+  tryCatch.async(async () => {
+    const content = await fs.readFile(path, "utf8");
+    return JSON.parse(content) as T;
+  }, `Read JSON File: ${path}`);
+
+interface Config {};
+interface Service {};
+
+export async function initService(config: Config) {
+  return {} as Service;
+}
+
+// @noErrors
+// ---cut---
+async function initConfiguredService(config: Config) {
+  return tryCatch.async(async () => {    
+    const [configText, readErr] = await readFileSafe("./config.json");
+    if (readErr) throw readErr;
+
+    const [config, parseErr] = parseJson<Config>(configText, "Parse Config JSON");
+    if (parseErr) throw parseErr;
+
+    const [service, initErr] = await tryCatch.async(
+      () => initService(config),
+      "Initialize Service"
+    );
+    if (initErr) throw initErr;
+
+    return service;
+  });
+}
+```
+
+## Error Handling Helper
+
+:::danger[BUG]
+It doesn't work. Feel free to contribute.
+:::
+
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+// ---cut---
+function ifError<E, T>(error: E | null, onError: (e: E) => void): error is E {
+  if (error) onError(error);
+  return !!error;
+}
+```
+
+Then:
+
+<details>
+<summary>Not working example</summary>
+```ts twoslash
+import { tryCatch } from "@maxmorozoff/try-catch-tuple";
+
+import { promises as fs } from "node:fs";
+import { dirname } from "node:path";
+
+export const parseJson = <T = unknown>(raw: string, operationName = "Parse JSON") =>
+  tryCatch(() => JSON.parse(raw) as T, operationName);
+
+export const readFileSafe = (path: string, encoding: BufferEncoding = "utf8") =>
+  tryCatch.async(() => fs.readFile(path, { encoding }), `Read File: ${path}`);
+
+export const writeFileSafe = (path: string, data: string | Buffer) =>
+  tryCatch.async(async () => {
+    await fs.mkdir(dirname(path), { recursive: true });
+    await fs.writeFile(path, data);
+    return true;
+  }, `Write File: ${path}`);
+
+export const jsonFileSafe = <T = unknown>(path: string) =>
+  tryCatch.async(async () => {
+    const content = await fs.readFile(path, "utf8");
+    return JSON.parse(content) as T;
+  }, `Read JSON File: ${path}`);
+
+const ifError = <E, T>(error: E | null, onError: (e: E) => void): error is E => {
+  if (error) onError(error);
+  return !!error;
+}
+
+interface Config {};
+function logAndAbort() {
+
+}
+// @noErrors
+// ---cut---
+const [configText, readError] = await readFileSafe("./config.json");
+if (ifError(readError, logAndAbort)) return [configText, readError];
+configText;
+// ^?
+readError;
+// ^?
+const [config, parseError] = parseJson<Config>(configText, "Parse Config");
+if (ifError(parseError, logAndAbort)) return;
+const [cfg] = parseJson<Config>(configText, "Parse Config");
+
+```
+</details>
+
+---
+
+## Ignoring Errors Explicitly
+
+The tuple plugin allows `[value, ,]` when `allowIgnoredError: true`. Only use this when:
+
+- Failure is *truly non-critical*.
+- You log or degrade gracefully elsewhere.
+- The invariant does not become silently unsafe.
+
+```ts
+const [avatar, ,] = await safeFetch<Blob>(avatarUrl, {
+  operationName: "Fetch Avatar (Non-Critical)",
+});
+```
+
+Prefer explicit comments:
+
+```ts
+// Intentionally ignoring error: fallback avatar used if fetch fails
+const [avatar, ,] = await safeFetch<Blob>(avatarUrl, {
+  operationName: "Fetch Avatar",
+});
+```
+
+---
+
+{/* ## Mapping Errors
+
+Turn low-level generic errors into domain errors *after destructuring*:
+
+```ts
+class ServiceUnavailable extends Error {}
+class CorruptPayload extends Error {}
+
+function mapUserError(err: Error) {
+  if (/HTTP 5\d\d/.test(err.message)) return new ServiceUnavailable(err.message);
+  if (/Invalid.*JSON/.test(err.message)) return new CorruptPayload(err.message);
+  return err;
+}
+
+const [raw, fetchErr] = await fetchRawUser("42");
+if (fetchErr) return [null, mapUserError(fetchErr)] as const;
+```
+
+--- */}
+
+## Returning vs Throwing
+
+Keep the contract: functions returning a `Result` **should not throw** (unless a truly unrecoverable programmer error). Pick one style per layer:
+
+- Outer API boundary (e.g., HTTP controller) often returns plain values & throws (framework catches).
+- Inner service/application layer can standardize on `[data, error]` for explicit branching.
+- Mixing patterns arbitrarily increases cognitive load.
+
+---
+{/* 
+## Testing Patterns
+
+Write tests asserting both success & failure shape:
+
+```ts
+test("getUser returns error for missing user", async () => {
+  const [user, err] = await getUser("missing");
+  expect(user).toBeNull();
+  expect(err).toBeInstanceOf(NotFoundError);
+});
+
+test("getUser returns user on success", async () => {
+  const [user, err] = await getUser("123");
+  expect(err).toBeNull();
+  expect(user).toMatchObject({ id: "123" });
+});
+```
+
+--- */}
+
+## Migrating from try/catch Blocks
+
+Refactor incrementally:
+
+1. Identify a deep nesting chain.
+2. Extract each risky call into a wrapper returning tuple.
+3. Replace the nested try/catch with a linear sequence of `[val, err]` checks.
+4. Add operation names gradually.
+
+Before:
+
+```ts
+try {
+  const user = await fetchUser();
+  const settings = await fetchSettings(user.id);
+  const theme = parseTheme(settings.themeJson);
+  return theme;
+} catch (e) {
+  // ambiguous: which step failed?
+  return defaultTheme;
+}
+```
+
+After:
+
+```ts
+const [user, userErr] = await fetchUser();
+if (userErr) return defaultTheme;
+
+const [settings, settingsErr] = await fetchSettings(user.id);
+if (settingsErr) return defaultTheme;
+
+const [theme, themeErr] = parseTheme(settings.themeJson);
+if (themeErr) return defaultTheme;
+
+return theme;
+```
+
+---
+
+## Performance Considerations
+
+- Overhead is minimal: 1-3 function invocations + try/catch boundary.
+- In V8/modern runtimes, predictable structured error handling performs well._(source?)_
+- Avoid wrapping ultra‑hot micro-ops (tight loops) unless they actually throw.
+
+---
+
+## Anti-Patterns
+
+| Anti-Pattern                               | Better Approach |
+|-------------------------------------------|-----------------|
+| Passing raw `Result` deeper without unpacking | Unpack early; propagate only refined data or new `[data,error]`. |
+| Wrapping code that cannot throw (pure arithmetic) | Skip wrapper. |
+| Building giant monolithic wrapper doing fetch + parse + validate + map + derive | Layer small wrappers; richer error context. |
+| Ignoring error silently (`[data, ,]`) in critical logic | Always branch or log. |
+
+---
+
+{/* ## Interop: Converting to Exceptions (Edge Cases)
+
+If a consumer expects traditional throwing semantics:
+
+```ts
+function unwrap<T>([data, error]: Result<T>): T {
+  if (error) throw error;
+  return data;
+}
+
+const user = unwrap(await fetchUser("1"));
+```
+
+Use sparingly—this reintroduces hidden control flow.
+
+--- */}
+
+## Checklist for New Wrapper
+
+- [ ] Name describes intent (not implementation details).
+- [ ] Handles success and rejects with explicit `throw` inside the wrapped function (or returns value).
+- [ ] Narrowed / annotated expected error types with `.errors<>()` if valuable.
+- [ ] Returns `Result<T, E>` only (never mixing thrown exceptions).
+- [ ] Unit tests cover at least one success and one representative failure.
+
+---
+
+## Summary
+
+Adopting `tryCatch` effectively is less about the primitive and more about **systematic consistency**:
+
+1. Wrap boundaries.
+2. Name operations.
+3. Decompose multi-step flows into linear, readable branches.
+4. Classify and narrow errors where it adds decision-making value.
+5. Avoid silent ignores unless consciously intentional and documented.
+
+With these patterns, the tuple approach scales cleanly while retaining clarity—and the TypeScript tooling enforces correctness without sacrificing ergonomics.
+
+---
